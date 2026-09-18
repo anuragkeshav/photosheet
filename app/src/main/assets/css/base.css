@@ -1,0 +1,429 @@
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('../fonts/PlusJakartaSans.woff2') format('woff2');
+}
+:root{
+  color-scheme:light;
+  --blue:#0a84ff;
+  --blue-soft:#eaf3ff;
+  --ink:#0e1526;
+  --muted:#5c667c;
+  --line:rgba(20,30,55,.12);
+  /* liquid glass materials */
+  --g-regular:rgba(255,255,255,.46);
+  --g-clear:rgba(255,255,255,.24);
+  --g-edge:rgba(255,255,255,.72);
+  --g-blur:blur(30px) saturate(180%) brightness(1.06);
+  --g-blur-lite:blur(20px) saturate(160%) brightness(1.04);
+  --tint:#0a84ff;
+  --bg:#e9eef8;
+  /* Safe fallback for WebViews that do not report system-bar insets. Native
+     code replaces these with the exact values when Android provides them. */
+  --system-top:28px;
+  --system-bottom:24px;
+  /* Sheet geometry. Defaults describe A4 + 35x45mm; PS.layout overwrites every
+     one of these on the root element whenever the size selection changes. */
+  --photo-w:35mm; --photo-h:45mm; --col-gap:4mm; --row-gap:4mm; --pad-x:9.5mm; --pad-y:3.5mm;
+  --paper-w:210mm; --paper-h:297mm; --sheet-cols:5; --card-ratio:35/45;
+  --paper:#fff; --guide:#d9dee8;
+  --sans:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-bottom:128px}
+html,body{
+  margin:0;padding:0;min-height:100%;
+  font-family:var(--sans);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  /* keep momentum scrolling on the compositor and stop bounce-chaining jank */
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:none;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+button,input,select,textarea{font-family:inherit;-webkit-user-select:none;user-select:none}
+body{background:var(--bg)}
+/* Aurora wallpaper — colorful ambient light so the glass has something to refract.
+   Kept luminous near the very top so the fixed dark status-bar icons stay legible. */
+body::before{
+  content:"";position:fixed;inset:-25%;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(42% 40% at 18% 22%,rgba(79,157,255,.62),transparent 62%),
+    radial-gradient(38% 36% at 82% 14%,rgba(167,139,250,.55),transparent 62%),
+    radial-gradient(46% 44% at 86% 78%,rgba(56,213,230,.55),transparent 62%),
+    radial-gradient(42% 42% at 14% 84%,rgba(255,143,206,.5),transparent 62%),
+    radial-gradient(52% 50% at 52% 54%,rgba(126,240,194,.34),transparent 70%);
+  filter:blur(26px) saturate(126%);
+  animation:auroraDrift 26s cubic-bezier(.45,0,.55,1) infinite alternate;
+  will-change:transform;transform:translateZ(0);backface-visibility:hidden;
+}
+/* Top wash keeps dark status-bar icons readable; bottom wash settles the aurora
+   into a calm tone where the system navigation bar sits, so the boundary between
+   web content and the native bar reads as one surface instead of a hard seam. */
+body::after{
+  content:"";position:fixed;left:0;right:0;top:0;bottom:0;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.78) 0,rgba(255,255,255,.3) 54px,rgba(255,255,255,0) 118px),
+    linear-gradient(0deg,rgba(238,242,250,.8) 0,rgba(238,242,250,.3) 58px,rgba(238,242,250,0) 132px);
+}
+@keyframes auroraDrift{
+  0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+  50%{transform:translate3d(2%,-2%,0) scale(1.08) rotate(4deg)}
+  100%{transform:translate3d(-2%,2%,0) scale(1.04) rotate(-3deg)}
+}
+button{font:inherit;-webkit-tap-highlight-color:transparent}
+.app{min-height:100dvh;padding:calc(16px + var(--system-top)) 16px calc(118px + var(--system-bottom));max-width:760px;margin:auto}
+.topbar{display:none!important}
+
+/* ===== shared liquid-glass refractive edge (specular ring) ===== */
+.glass-edge{position:relative}
+.glass-edge::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;z-index:3;
+  background:linear-gradient(135deg,
+    rgba(255,255,255,.95) 0%,rgba(255,255,255,.35) 22%,
+    rgba(255,255,255,0) 46%,rgba(255,255,255,0) 60%,
+    rgba(255,255,255,.28) 82%,rgba(255,255,255,.7) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+
+/* compact status row */
+.statusbar{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 15px}
+.status-left{display:flex;flex-direction:column;gap:0}
+.status-title{font-size:23px;font-weight:800;letter-spacing:-.035em;color:#0c1424;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+.status-sub{font-size:12px;color:var(--muted)}
+.count-pill{
+  position:relative;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;
+  background:var(--g-regular);border:1px solid transparent;
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:0 6px 20px rgba(20,30,55,.12),inset 0 1px 0 rgba(255,255,255,.85),inset 0 -6px 12px rgba(255,255,255,.28);
+  font-size:13.5px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.01em;color:#101a2e;
+}
+.count-pill::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,0) 50%,rgba(255,255,255,.55));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.count-dot{width:9px;height:9px;border-radius:50%;background:#b9c2d2}
+.count-dot.active{background:#30d158;box-shadow:0 0 0 4px rgba(48,209,88,.18),0 0 10px rgba(48,209,88,.5)}
+
+/* Size chip: sits beside the count pill because the size selection governs both
+   tabs, not just the sheet preview. */
+.status-right{display:flex;align-items:center;gap:8px}
+.size-chip{
+  position:relative;display:flex;align-items:center;gap:6px;padding:9px 12px;border:0;border-radius:999px;
+  background:var(--g-regular);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:0 6px 20px rgba(20,30,55,.12),inset 0 1px 0 rgba(255,255,255,.85),inset 0 -6px 12px rgba(255,255,255,.28);
+  font-size:12.5px;font-weight:750;letter-spacing:-.01em;color:#101a2e;white-space:nowrap;
+  transition:transform .16s cubic-bezier(.2,.8,.2,1)
+}
+.size-chip::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,0) 50%,rgba(255,255,255,.55));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.size-chip svg{width:15px;height:15px;color:#0a84ff}
+.size-chip:active{transform:scale(1.05)}
+
+/* segmented pill — glass track */
+.tabs{
+  position:relative;display:grid;grid-template-columns:1fr 1fr;padding:5px;border-radius:999px;
+  background:var(--g-clear);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:0 12px 36px rgba(24,39,64,.16),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -8px 16px rgba(255,255,255,.2);
+  /* Some OEM WebViews report an undersized status inset while scrolling.
+     The minimum keeps this pill below status icons on every device. */
+  margin-bottom:16px;position:sticky;top:max(44px,calc(8px + var(--system-top)));z-index:55;isolation:isolate;
+  overflow:hidden;
+  will-change:transform;transform:translateZ(0);
+}
+.tabs::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;z-index:1;
+  background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,0) 48%,rgba(255,255,255,.5));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.tabs::after{
+  content:"";position:absolute;z-index:1;pointer-events:none;
+  top:5px;bottom:5px;left:5px;width:calc(50% - 5px);border-radius:999px;
+  background:rgba(255,255,255,.7);
+  -webkit-backdrop-filter:blur(10px) saturate(180%);backdrop-filter:blur(10px) saturate(180%);
+  box-shadow:0 6px 18px rgba(10,110,232,.18),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -4px 10px rgba(255,255,255,.4);
+  transform:translate3d(0,0,0);
+  transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  will-change:transform;
+}
+.tabs.preview-active::after{transform:translate3d(100%,0,0)}
+.tab{
+  position:relative;z-index:2;border:0;background:transparent;color:#4a5675;padding:11px 8px;border-radius:999px;
+  font-size:14.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+  transition:transform .22s cubic-bezier(.2,.8,.2,1),color .22s ease;
+}
+.tab.selected{
+  color:#0a5fd0;
+}
+.tab:not(.selected):active{transform:scale(.96)}
+.tab svg{width:19px;height:19px}
+
+/* Ultra-soft scroll edge fades tuned for the aurora wallpaper. */
+.scroll-fade{position:relative}
+.scroll-fade:before,.scroll-fade:after{
+  content:"";position:fixed;left:0;right:0;pointer-events:none;z-index:30;
+  opacity:0;transition:opacity .2s cubic-bezier(.16,1,.3,1);
+  will-change:opacity;contain:paint;
+}
+/* Deeper, longer-tailed fades. Multi-stop so the ramp eases out instead of
+   ending on a visible line — a 2-stop linear-gradient always shows its edge. */
+.scroll-fade:before{
+  top:0;height:102px;
+  background:linear-gradient(180deg,
+    rgba(255,255,255,.88) 0%,
+    rgba(255,255,255,.68) 20%,
+    rgba(255,255,255,.42) 42%,
+    rgba(255,255,255,.18) 66%,
+    rgba(255,255,255,.05) 84%,
+    rgba(255,255,255,0) 100%);
+}
+/* Runs past the bottom of the viewport so it also washes the nav-bar strip,
+   making the hand-off to the system bar continuous rather than a hard cut. */
+.scroll-fade:after{
+  bottom:0;height:156px;
+  background:linear-gradient(0deg,
+    rgba(236,241,250,.86) 0%,
+    rgba(236,241,250,.68) 20%,
+    rgba(236,241,250,.42) 42%,
+    rgba(236,241,250,.18) 67%,
+    rgba(236,241,250,.05) 85%,
+    rgba(236,241,250,0) 100%);
+}
+.scroll-fade.can-scroll-up:before{opacity:1}
+.scroll-fade.can-scroll-down:after{opacity:1}
+
+/* A small transition for screen changes: enough motion to show context, but
+   short and transform-only so it stays smooth on high-refresh displays. */
+.tab-view-enter{animation:tabViewEnter .28s cubic-bezier(.2,.8,.2,1) both}
+@keyframes tabViewEnter{
+  from{opacity:0;transform:translate3d(0,10px,0)}
+  to{opacity:1;transform:translate3d(0,0,0)}
+}
+
+/* slots */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 12px}
+.section-head .hint{font-size:14px;color:#4b5568;font-weight:600;text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.fill-btn{
+  position:relative;border:1px solid transparent;border-radius:999px;
+  background:var(--g-regular);color:#0a5fd0;
+  padding:9px 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  font-size:13px;font-weight:800;letter-spacing:-.01em;
+  -webkit-backdrop-filter:var(--g-blur-lite);backdrop-filter:var(--g-blur-lite);
+  box-shadow:0 6px 18px rgba(10,95,208,.14),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -5px 10px rgba(255,255,255,.3);
+  cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.2,1),box-shadow .16s ease
+}
+.fill-btn::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,0) 52%,rgba(255,255,255,.5));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.fill-btn svg{width:15px;height:15px}
+.fill-btn:active{transform:scale(1.05)}
+.fill-btn[hidden]{display:none}
+.fill-btn.danger{color:#e0342f;box-shadow:0 6px 18px rgba(224,52,47,.14),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -5px 10px rgba(255,255,255,.3)}
+.fill-btn.danger svg{width:15px;height:15px}
+.fill-btn.danger:active{transform:scale(1.05)}
+.fill-btn.danger[hidden]{display:none}
+.slot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+/* Shown when a size change shrinks the sheet below the number of photos held. */
+.overflow-note{
+  margin:12px 2px 0;padding:11px 13px;border-radius:14px;
+  background:rgba(255,159,10,.14);color:#8a5200;
+  font-size:12.5px;font-weight:700;line-height:1.4
+}
+.overflow-note[hidden]{display:none}
+.slot-card{
+  position:relative;aspect-ratio:var(--card-ratio);border:0;border-radius:22px;
+  /* NO backdrop-filter here. 30 cards x (card + number chip + plus circle) was
+     ~90 live blur regions the compositor re-rasterized every scroll frame.
+     A static translucent fill reads the same over the soft aurora and lets the
+     whole grid scroll as one cheap layer. Real blur stays on fixed chrome only. */
+  background:linear-gradient(160deg,rgba(255,255,255,.62),rgba(255,255,255,.42));
+  display:flex;align-items:center;justify-content:center;
+  color:#8b97ab;cursor:pointer;overflow:hidden;
+  box-shadow:0 8px 22px rgba(20,30,55,.1),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -6px 14px rgba(255,255,255,.22);
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease;
+  contain:layout paint style;
+  content-visibility:auto;
+  contain-intrinsic-size:auto 150px;
+}
+.slot-card::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;z-index:2;
+  background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(255,255,255,0) 50%,rgba(255,255,255,.4));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.slot-card:active{transform:scale(.97)}
+.slot-card.is-active{
+  color:#0a5fd0;
+  background:rgba(230,243,255,.5);
+  box-shadow:0 0 0 2px rgba(10,132,255,.6),0 10px 26px rgba(10,132,255,.28),inset 0 1px 0 rgba(255,255,255,.85);
+}
+.slot-card.is-active::before{background:linear-gradient(135deg,rgba(120,190,255,.95),rgba(255,255,255,0) 55%,rgba(120,190,255,.5))}
+.slot-card.is-filled{background:#fff;box-shadow:0 10px 26px rgba(20,30,55,.16),inset 0 0 0 1px rgba(255,255,255,.6)}
+.slot-card.is-filled::before{display:none}
+.slot-card img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;
+  image-rendering:-webkit-optimize-contrast;image-rendering:high-quality;
+  transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;
+}
+.slot-number{
+  position:absolute;top:8px;left:8px;z-index:4;padding:5px 9px;border-radius:999px;
+  background:rgba(255,255,255,.82);
+  color:#2f3a4f;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 8px rgba(20,30,55,.12);
+}
+.is-active .slot-number{background:rgba(10,132,255,.9);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 2px 10px rgba(10,132,255,.4)}
+.slot-plus{
+  position:relative;z-index:2;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.78);color:#8ea0b8;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 4px 12px rgba(20,30,55,.1);
+  transition:background .2s ease,color .2s ease,box-shadow .2s ease
+}
+.is-active .slot-plus{background:linear-gradient(160deg,#3aa0ff,#0a84ff);color:#fff;box-shadow:0 10px 20px rgba(10,132,255,.4),inset 0 1px 0 rgba(255,255,255,.5)}
+.slot-plus svg{width:22px;height:22px}
+.slot-add-text{position:absolute;bottom:18%;z-index:2;font-size:12px;font-weight:800;color:#0a5fd0}
+.slot-edit{
+  position:absolute;left:9px;right:9px;bottom:9px;z-index:4;padding:8px 10px;border-radius:999px;text-align:center;
+  background:rgba(15,23,42,.72);color:#fff;font-size:11px;font-weight:800;letter-spacing:.02em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25)
+}
+
+/* A4 preview */
+.preview-tools{
+  position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--g-regular);border:1px solid transparent;border-radius:20px;
+  padding:11px 13px;margin-bottom:14px;
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:0 10px 30px rgba(20,30,55,.12),inset 0 1px 0 rgba(255,255,255,.8),inset 0 -6px 14px rgba(255,255,255,.25)
+}
+.preview-tools::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,0) 50%,rgba(255,255,255,.5));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+/* A button, not a label: tapping the size summary is the second way into the
+   size sheet (the status-bar chip is the first). */
+.paper-meta{border:0;background:transparent;padding:0;text-align:left;font-size:13px;color:#5a6478;font-weight:600;font-family:inherit}
+.paper-meta strong{color:#101a2e;font-weight:800}
+.paper-meta:active{opacity:.6}
+.zoom-group{position:relative;display:flex;gap:4px;background:rgba(255,255,255,.4);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:13px;padding:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.zoom-btn{border:0;background:transparent;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;color:#5a6478;cursor:pointer;transition:all .18s ease}
+.zoom-btn.active{background:linear-gradient(160deg,#243049,#141d30);color:#fff;box-shadow:0 3px 10px rgba(20,30,55,.28),inset 0 1px 0 rgba(255,255,255,.18)}
+.stage{
+  position:relative;width:100%;overflow:hidden;border-radius:16px;
+  background:transparent;
+  -webkit-overflow-scrolling:touch;
+  contain:layout paint;
+}
+.stage.is-scrollable{
+  overflow:auto!important;
+  touch-action:pan-x pan-y;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.scalewrap{
+  position:relative;width:100%;display:flex;justify-content:center;
+  margin:auto;
+}
+.scaler{
+  transform-origin:top center;
+  transition:transform .28s cubic-bezier(.22,1,.36,1);
+  will-change:transform;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+}
+.sheet{
+  width:var(--paper-w);height:var(--paper-h);background:var(--paper);padding:var(--pad-y) var(--pad-x);border-radius:0;
+  box-shadow:none;
+  display:grid;grid-template-columns:repeat(var(--sheet-cols),var(--photo-w));grid-auto-rows:var(--photo-h);
+  column-gap:var(--col-gap);row-gap:var(--row-gap);justify-content:center;align-content:center
+}
+.cell{
+  width:var(--photo-w);height:var(--photo-h);position:relative;border:.25mm solid var(--guide);overflow:hidden;background:#fff;
+  cursor:pointer;transition:border-color .15s ease,background .15s ease;
+}
+.cell:hover{border-color:#0a84ff}
+.cell img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  image-rendering:-webkit-optimize-contrast;image-rendering:high-quality;
+  transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;
+}
+.cell.addable{cursor:pointer;border:.5mm dashed #0a84ff;background:#edf6ff;display:flex;align-items:center;justify-content:center}
+.add-inner{display:flex;flex-direction:column;align-items:center;gap:1.8mm;color:#0a84ff;pointer-events:none}
+.plus-circle{width:11mm;height:11mm;border-radius:50%;background:#0a84ff;border:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1mm 3mm rgba(10,132,255,.22)}
+.plus-circle svg{width:6mm;height:6mm;color:#fff}.add-label{font-size:3.1mm;font-weight:800}
+.cell.is-empty{cursor:pointer;background:#f9fbfe;border:.25mm dashed #cbd5e1;display:flex;align-items:center;justify-content:center}
+.cell.is-empty:hover{background:#edf6ff;border-color:#0a84ff}
+.cell-empty-plus{
+  width:7mm;height:7mm;border-radius:50%;background:#eaf2fc;color:#7aa2d6;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;transition:all .15s ease;
+}
+.cell.is-empty:hover .cell-empty-plus{background:#0a84ff;color:#fff}
+.cell-empty-plus svg{width:3.6mm;height:3.6mm}
+
+/* floating liquid-glass action bar */
+.bottom-bar{
+  position:fixed;left:50%;bottom:max(12px,calc(12px + var(--system-bottom)),env(safe-area-inset-bottom));transform:translateX(-50%);
+  width:min(720px,calc(100% - 24px));display:grid;grid-template-columns:1fr 1.08fr;gap:8px;
+  padding:7px;border-radius:30px;background:var(--g-clear);
+  -webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+  box-shadow:0 22px 56px rgba(20,30,55,.24),0 4px 14px rgba(20,30,55,.1),inset 0 1px 0 rgba(255,255,255,.85),inset 0 -8px 18px rgba(255,255,255,.22);
+  z-index:50;isolation:isolate
+}
+.bottom-bar::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,0) 50%,rgba(255,255,255,.55));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.action-btn{
+  position:relative;overflow:hidden;width:100%;min-width:0;
+  border:0;border-radius:23px;min-height:56px;background:rgba(255,255,255,.34);color:#101a2e;
+  display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;font-size:16px;font-weight:800;
+  -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -5px 12px rgba(255,255,255,.3),0 2px 6px rgba(20,30,55,.06);
+  transition:transform .14s cubic-bezier(.2,.8,.2,1),box-shadow .15s ease
+}
+.action-btn::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.25px;pointer-events:none;z-index:2;
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,255,255,0) 52%,rgba(255,255,255,.5));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.action-btn:active{transform:scale(1.04)}
+.action-btn.primary{
+  color:#fff;
+  background:linear-gradient(160deg,rgba(64,160,255,.92),rgba(10,132,255,.9) 55%,rgba(6,110,224,.92));
+  box-shadow:0 12px 28px rgba(10,110,224,.42),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -6px 14px rgba(255,255,255,.14);
+}
+.action-btn.primary::before{background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,0) 52%,rgba(200,230,255,.6))}
+/* signature moment: a slow specular shimmer sweeps the primary glass CTA */
+.action-btn.primary::after{
+  content:"";position:absolute;top:-60%;bottom:-60%;left:-30%;width:36%;z-index:3;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:skewX(-18deg) translateX(-260%);
+  animation:glassShimmer 4.6s cubic-bezier(.5,0,.2,1) infinite;
+  will-change:transform;
+}
+.action-btn.primary .action-sub{opacity:.85}
+.action-btn svg{width:22px;height:22px;position:relative;z-index:2}.action-sub{display:block;font-size:10px;font-weight:600;opacity:.62;margin-top:1px}
+.action-copy{position:relative;z-index:2;text-align:left;line-height:1.05}
+@keyframes glassShimmer{0%{transform:skewX(-18deg) translateX(-260%)}55%,100%{transform:skewX(-18deg) translateX(620%)}}
